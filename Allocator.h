@@ -1,17 +1,13 @@
 #ifndef ALLOCATOR_HPP
 #define ALLOCATOR_HPP
-
-#include <list>
+#include <stack>
 
 template<class T, std::size_t BLOCK_SIZE>
 class linear_allocator_t {
 private:
-    std::list<T*> lst;
+    std::stack<T*> lst;
     T* buffer;
 public:
-    /*
-     * std::allocator_traits
-     */
     using allocator_type = linear_allocator_t;
     using value_type = T;
     using pointer = T*;
@@ -38,21 +34,11 @@ public:
         }
     }
 
-    /*
-     * Allocator can't call constructor,
-     * so programm should call it manually
-     * OTHER_T is type of allocating variable
-     * ARGS... is arguments for constructor
-     */
     template<class OTHER_T, class... ARGS>
     void construct(OTHER_T* p, ARGS... arguments) {
         *p =  OTHER_T(std::forward<ARGS>(arguments)...);
     }
 
-    /*
-     * Linear allocator can't call delete
-     * at the middle of allocated memory
-     */
     void deallocate(pointer, std::size_t) {
         ;
     }
@@ -73,10 +59,6 @@ public:
         delete[] buffer;
     }
 
-    /*
-     * This method is used to get
-     * another allocator type
-     */
     template<class OTHER_T>
     class rebind {
     public:
