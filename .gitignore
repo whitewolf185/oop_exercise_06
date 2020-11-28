@@ -5,6 +5,7 @@
 #files
 *test*
 *.docx
+*.doc
 
 #exceptions
 !report.docx
