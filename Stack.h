@@ -2,189 +2,177 @@
 #define OOP_EXERCISE_05_STACK_H
 
 #include "Rectangle.h"
+#include "Allocator.h"
 
-template<class T>
-struct Node;
-
-template<class T>
-void operator++(std::shared_ptr<Node<T>> &curNode) {
-    if (curNode) {
-        curNode = curNode->prev;
-    }
-    else {
-        throw std::out_of_range("Iterator has already in nullptr");
-    }
-}
-
-template<class T>
-bool operator!=(const Node<T> &lhs, const Node<T> &rhs) {
-    return &lhs != &rhs;
-}
-
-template<class T>
-bool operator==(const Node<T> &lhs, const Node<T> &rhs) {
-    return &lhs.data == &rhs.data;
-}
-
-template<class T>
-std::ostream &operator<<(std::ostream &cout, const Node<T> &node) {
-    cout << node.data;
-    return cout;
-}
-
-template<class T>
-struct Node {
-    T data;
-    std::shared_ptr<Node> prev;
-
-
-    Node() : prev(nullptr) {
-    }
-
-    Node(const T &val) : data(val) {
-    }
-
-    friend void operator++<>(std::shared_ptr<Node<T>> &n);
-
-    friend bool operator!=<>(const Node<T> &lhs, const Node<T> &rhs);
-
-    friend bool operator==<>(const Node<T> &lhs, const Node<T> &rhs);
-
-    friend std::ostream &operator<<<>(std::ostream &cout, const Node<T> &obj);
-};
-
-
-template<class T>
-class Stack {
+template<class T, class ALLOCATOR>
+class stack_t {
 private:
-    size_t size = 0;
-    std::shared_ptr<Node<T>> head;
-public:
+    struct stack_node_t;
 
+    using allocator_type = typename ALLOCATOR::template rebind<stack_node_t>::other;
+
+    struct deleter {
+        allocator_type stack_node_deleter;
+
+        deleter() : stack_node_deleter() {};
+        deleter(allocator_type* another_deleter) : stack_node_deleter(another_deleter) {}
+
+        /* std::shared_ptr uses operator() to delete memory */
+        void operator() (void* ptr) {
+            stack_node_deleter.deallocate((stack_node_t*)ptr, 1);
+        }
+    };
+
+    struct stack_node_t {
+        T data;
+        std::shared_ptr<stack_node_t> next;
+
+        stack_node_t() noexcept : data(), next(nullptr) {};
+        explicit stack_node_t(const T & elem) noexcept : data(elem), next(nullptr) {}
+
+        friend bool operator != (const stack_node_t & lhs, const stack_node_t & rhs) {
+            return &lhs.data != &rhs.data;
+        }
+
+        friend bool operator == (const stack_node_t & lhs, const stack_node_t & rhs) {
+            return &lhs.data == &rhs.data;
+        }
+
+        friend std::ostream & operator << (std::ostream & out, const stack_node_t & node) {
+            out << node.data;
+            return out;
+        }
+    };
+
+public:
     class iterator {
     private:
-        std::shared_ptr<Node<T>> iter;
-
+        std::shared_ptr<stack_node_t> ptr;
     public:
         using iterator_category = std::forward_iterator_tag;
         using difference_type = std::ptrdiff_t;
         using value_type = T;
-        using pointer = T *;
-        using reference = T &;
+        using pointer = T*;
+        using reference = T&;
+        using const_reference = const T&;
 
-        iterator() : iter(nullptr) {
+        iterator() : ptr(nullptr) {}
+        iterator(const std::shared_ptr<stack_node_t> & another_ptr) : ptr(another_ptr) {}
+
+        bool is_null() {
+            return ptr == nullptr;
         }
 
-        explicit iterator(const std::shared_ptr<Node<T>> &anotherIter) : iter(anotherIter) {
+        void unvalidate() {
+            ptr = nullptr;
         }
 
-        bool isNull() {
-            return iter == nullptr;
+        iterator & operator ++ () {
+            if (this->ptr != nullptr) {
+                this->ptr = this->ptr->next;
+                return *this;
+            } else {
+                throw(std::runtime_error("Iterator points to nullptr!"));
+            }
         }
 
-        friend void operator++(iterator &it) {
-            ++it.iter;
+        bool operator != (const iterator & other_iterator) {
+            return &other_iterator.ptr->data != &this->ptr->data;
         }
 
-        friend bool operator!=(const Stack<T>::iterator &lhs, const Stack<T>::iterator &rhs) {
-            return lhs.iter != rhs.iter;
-        }
-
-        friend std::ostream &operator<<(std::ostream &out, const iterator &it) {
-            out << *it.iter;
+        friend std::ostream & operator << (std::ostream & out, const iterator & it) {
+            out << *(it.ptr);
             return out;
         }
 
-        Node<T> &operator*() {
-            return *iter;
+        stack_node_t & operator * () {
+            return *ptr;
         }
     };
 
-    Stack() noexcept: head(nullptr) {
-    }
+private:
+    std::shared_ptr<stack_node_t> top_node;
+    deleter stack_deleter;
 
-    void pop() {
-        if (head) {
-            head = head->prev;
-            --size;
-        }
-        else {
-            throw std::runtime_error("Stack is empty");
-        }
-    }
-
-    void push(const T &val) {
-        Node<T> *newNode = new Node<T>(val);
-        std::shared_ptr<Node<T>> newPtr{newNode};
-        newPtr->prev = head;
-        head = newPtr;
-        ++size;
-    }
-
-    T top() {
-        if (head) {
-            return head->data;
-        }
-        else {
-            throw std::runtime_error("Nullptr in head");
-        }
-    }
-
-    void insert(Stack<T>::iterator &it, const T &elem) {
-        std::unique_ptr<Node<T>> newNode{new Node<T>(elem)};
-        std::shared_ptr<Node<T>> newPtr = std::move(newNode);
-        std::shared_ptr<Node<T>> prevPtr = head;
-
-        if (prevPtr) {
-            if (!it.isNull()) {
-                while (*prevPtr->prev != *it) {
-                    ++prevPtr;
-                }
-            }
-            else {
-                while (prevPtr->prev != nullptr) {
-                    ++prevPtr;
-                }
-            }
-            newPtr->prev = prevPtr->prev;
-            prevPtr->prev = newPtr;
-        }
-        else {
-            head = newPtr;
-        }
-        ++size;
-    }
-
-    void erase(iterator &it) {
-        if (it.isNull()) {
-            throw std::runtime_error("Iterator is in nullptr state");
-        }
-        else {
-            if (*it == *head) {
-                head = head->prev;
-            }
-            else {
-                std::shared_ptr<Node<T>> prevPtr = head;
-                while (*prevPtr->prev != *it) {
-                    ++prevPtr;
-                }
-                prevPtr->prev = prevPtr->prev->prev;
-            }
-            --size;
-        }
-
-    }
+public:
+    stack_t() noexcept : top_node() {};
 
     iterator begin() {
-        return iterator(head);
+        return iterator(top_node);
     }
 
     iterator end() {
         return iterator(nullptr);
     }
 
-    size_t getSize() {
-        return size;
+    void pop() {
+        if (top_node) {
+            top_node = top_node->next;
+        } else {
+            throw(std::runtime_error("Stack is empty!"));
+        }
+    }
+
+    void push(const T & elem) {
+        stack_node_t* new_node = stack_deleter.stack_node_deleter.allocate(sizeof(stack_node_t));
+        stack_deleter.stack_node_deleter.construct(new_node, elem);
+        std::shared_ptr<stack_node_t> new_node_shared(new_node, stack_deleter);
+        new_node_shared->next = top_node;
+        top_node = new_node_shared;
+    }
+
+    T top() {
+        if (top_node) {
+            return top_node->data;
+        } else {
+            throw(std::runtime_error("Stack is empty!"));
+        }
+    }
+
+    void erase(iterator it) {
+        if (it.is_null()) {
+            throw(std::runtime_error("Iterator points to nullptr!"));
+        } else {
+            if (*it == *top_node) {
+                top_node = top_node->next;
+            } else {
+                std::shared_ptr<stack_node_t> prev_node = top_node;
+                while (*prev_node->next != *it) {
+                    prev_node = prev_node->next;
+                }
+                prev_node->next = prev_node->next->next;
+                (*it).next = nullptr;
+            }
+            it.unvalidate();
+        }
+    }
+
+    void insert(iterator it, const T & elem) {
+        stack_node_t* new_node = stack_deleter.stack_node_deleter.allocate(sizeof(stack_node_t));
+        stack_deleter.stack_node_deleter.construct(new_node, elem);
+        std::shared_ptr<stack_node_t> new_node_shared(new_node, stack_deleter);
+        if (top_node) {
+            if (*it == *top_node) {
+                new_node_shared->next = top_node;
+                top_node = new_node_shared;
+                it.unvalidate();
+                return;
+            }
+            std::shared_ptr<stack_node_t> prev_node = top_node;
+            while (*prev_node->next != *it) {
+                prev_node = prev_node->next;
+            }
+            if (it.is_null()) {
+                prev_node->next = new_node_shared;
+            } else {
+                new_node_shared->next = prev_node->next;
+                prev_node->next = new_node_shared;
+                // std::swap(prev_node->data, prev_node->next->data);
+            }
+        } else {
+            top_node = new_node_shared;
+        }
+        it.unvalidate();
     }
 };
 
