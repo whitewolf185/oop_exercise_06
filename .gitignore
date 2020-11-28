@@ -1,2 +1,10 @@
+# derictories
 /cmake-*/
 /.idea/
+
+#files
+*test*
+*.docx
+
+#exceptions
+!report.docx
