@@ -5,11 +5,11 @@
 #include "Allocator.h"
 
 template<class T, class ALLOCATOR>
-class stack_t {
+class Stack {
 private:
-    struct stack_node_t;
+    struct TNode;
 
-    using allocator_type = typename ALLOCATOR::template rebind<stack_node_t>::other;
+    using allocator_type = typename ALLOCATOR::template rebind<TNode>::other;
 
     struct deleter {
         allocator_type stack_node_deleter;
@@ -19,26 +19,26 @@ private:
 
         /* std::shared_ptr uses operator() to delete memory */
         void operator() (void* ptr) {
-            stack_node_deleter.deallocate((stack_node_t*)ptr, 1);
+            stack_node_deleter.deallocate((TNode*)ptr, 1);
         }
     };
 
-    struct stack_node_t {
+    struct TNode {
         T data;
-        std::shared_ptr<stack_node_t> next;
+        std::shared_ptr<TNode> next;
 
-        stack_node_t() noexcept : data(), next(nullptr) {};
-        explicit stack_node_t(const T & elem) noexcept : data(elem), next(nullptr) {}
+        TNode() noexcept : data(), next(nullptr) {};
+        explicit TNode(const T & elem) noexcept : data(elem), next(nullptr) {}
 
-        friend bool operator != (const stack_node_t & lhs, const stack_node_t & rhs) {
+        friend bool operator != (const TNode & lhs, const TNode & rhs) {
             return &lhs.data != &rhs.data;
         }
 
-        friend bool operator == (const stack_node_t & lhs, const stack_node_t & rhs) {
+        friend bool operator == (const TNode & lhs, const TNode & rhs) {
             return &lhs.data == &rhs.data;
         }
 
-        friend std::ostream & operator << (std::ostream & out, const stack_node_t & node) {
+        friend std::ostream & operator << (std::ostream & out, const TNode & node) {
             out << node.data;
             return out;
         }
@@ -47,7 +47,7 @@ private:
 public:
     class iterator {
     private:
-        std::shared_ptr<stack_node_t> ptr;
+        std::shared_ptr<TNode> ptr;
     public:
         using iterator_category = std::forward_iterator_tag;
         using difference_type = std::ptrdiff_t;
@@ -57,7 +57,7 @@ public:
         using const_reference = const T&;
 
         iterator() : ptr(nullptr) {}
-        iterator(const std::shared_ptr<stack_node_t> & another_ptr) : ptr(another_ptr) {}
+        iterator(const std::shared_ptr<TNode> & another_ptr) : ptr(another_ptr) {}
 
         bool is_null() {
             return ptr == nullptr;
@@ -85,17 +85,17 @@ public:
             return out;
         }
 
-        stack_node_t & operator * () {
+        TNode & operator * () {
             return *ptr;
         }
     };
 
 private:
-    std::shared_ptr<stack_node_t> top_node;
+    std::shared_ptr<TNode> top_node;
     deleter stack_deleter;
 
 public:
-    stack_t() noexcept : top_node() {};
+    Stack() noexcept : top_node() {};
 
     iterator begin() {
         return iterator(top_node);
@@ -114,9 +114,9 @@ public:
     }
 
     void push(const T & elem) {
-        stack_node_t* new_node = stack_deleter.stack_node_deleter.allocate(sizeof(stack_node_t));
+        TNode* new_node = stack_deleter.stack_node_deleter.allocate(sizeof(TNode));
         stack_deleter.stack_node_deleter.construct(new_node, elem);
-        std::shared_ptr<stack_node_t> new_node_shared(new_node, stack_deleter);
+        std::shared_ptr<TNode> new_node_shared(new_node, stack_deleter);
         new_node_shared->next = top_node;
         top_node = new_node_shared;
     }
@@ -136,7 +136,7 @@ public:
             if (*it == *top_node) {
                 top_node = top_node->next;
             } else {
-                std::shared_ptr<stack_node_t> prev_node = top_node;
+                std::shared_ptr<TNode> prev_node = top_node;
                 while (*prev_node->next != *it) {
                     prev_node = prev_node->next;
                 }
@@ -148,9 +148,9 @@ public:
     }
 
     void insert(iterator it, const T & elem) {
-        stack_node_t* new_node = stack_deleter.stack_node_deleter.allocate(sizeof(stack_node_t));
+        TNode* new_node = stack_deleter.stack_node_deleter.allocate(sizeof(TNode));
         stack_deleter.stack_node_deleter.construct(new_node, elem);
-        std::shared_ptr<stack_node_t> new_node_shared(new_node, stack_deleter);
+        std::shared_ptr<TNode> new_node_shared(new_node, stack_deleter);
         if (top_node) {
             if (*it == *top_node) {
                 new_node_shared->next = top_node;
@@ -158,7 +158,7 @@ public:
                 it.unvalidate();
                 return;
             }
-            std::shared_ptr<stack_node_t> prev_node = top_node;
+            std::shared_ptr<TNode> prev_node = top_node;
             while (*prev_node->next != *it) {
                 prev_node = prev_node->next;
             }

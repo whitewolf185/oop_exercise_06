@@ -78,38 +78,38 @@ int main() {
     std::cout << "Input number of rectangle in stack" << std::endl;
     std::cin >> n;
     int cordX, cordY, sideA, sideB;
-    stack_t< Rectangle<int>, linear_allocator_t< Rectangle<int>, BLOCK_SIZE > > st;
+    Stack< Rectangle<int>, linear_allocator_t< Rectangle<int>, BLOCK_SIZE > > st;
     for (size_t i = 0; i < n; ++i) {
         size_t n;
-        std::cout << "Input index to insert a square" << std::endl;
+        std::cout << "Enter index to insert a rectangle" << std::endl;
         std::cin >> n;
-        std::cout << "Input square as follows: x y a" << std::endl;
-        std::cout << "x, y is a left bottom corner cords" << std::endl;
-        std::cout << "a and b are rectangle sides" << std::endl;
+        std::cout << "Enter your point and sides\n"
+                  << "First is point. Enter x and y.\n"
+                  << "Second are sides. Enter a and b" << std::endl;
         std::cin >> cordX >> cordY >> sideA >> sideB;
         try {
-            stack_t< Rectangle<int>, linear_allocator_t< Rectangle<int>, BLOCK_SIZE > >::iterator it = st.begin();
+            auto it = st.begin();
             while (n--) {
                 ++it;
             }
             st.insert(it, Rectangle<int>(std::pair<int, int>(cordX, cordY), sideA, sideB));
         } catch (std::runtime_error & exception) {
-            std::cout << exception.what() << std::endl;
+            std::terminate();
         }
     }
-    std::cout << "Your input:" << std::endl;
+    std::cout << "Your entering:" << std::endl;
     std::for_each(st.begin(), st.end(), Print);
-    std::cout << "Input index to erase from stack" << std::endl;
+    std::cout << "Enter index to erase from stack" << std::endl;
     std::cin >> n;
     try {
-        stack_t< Rectangle<int>, linear_allocator_t< Rectangle<int>, BLOCK_SIZE > >::iterator it = st.begin();
+        auto it = st.begin();
         while (n > 1) {
             ++it;
             --n;
         }
         st.erase(it);
     } catch (std::runtime_error & exception) {
-        std::cout << exception.what() << std::endl;
+        std::terminate();
     }
     std::cout << "After erase:" << std::endl;
     std::for_each(st.begin(), st.end(), Print);

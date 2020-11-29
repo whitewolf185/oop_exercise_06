@@ -5,7 +5,7 @@
 template<class T, std::size_t BLOCK_SIZE>
 class linear_allocator_t {
 private:
-    std::stack<T*> lst;
+    std::stack<T*> st;
     T* buffer;
 public:
     using allocator_type = linear_allocator_t;
@@ -19,16 +19,16 @@ public:
         if (buffer == nullptr) {
             buffer = new T[BLOCK_SIZE];
             for (std::size_t i = 0; i < BLOCK_SIZE; ++i) {
-                lst.push_back(&buffer[i]);
+                st.push(&buffer[i]);
             }
         }
-        printf("Allocatind %lu bytes in block with %lu free bytes\n", n, lst.size());
-        if (lst.size() < n) {
+        printf("Allocatind %lu bytes in block with %lu free bytes\n", n, st.size());
+        if (st.size() < n) {
             throw(std::bad_alloc());
         } else {
-            T* p = lst.front();
+            T* p = st.top();
             for (std::size_t i = 0; i < n; ++i) {
-                lst.pop_front();
+                st.pop();
             }
             return p;
         }
@@ -43,7 +43,7 @@ public:
         ;
     }
 
-    linear_allocator_t() : lst(), buffer(nullptr) {
+    linear_allocator_t() : st(), buffer(nullptr) {
         static_assert(BLOCK_SIZE > 0);
     }
 
@@ -51,7 +51,7 @@ public:
         buffer = new T[BLOCK_SIZE];
         for (std::size_t i = 0; i < BLOCK_SIZE; ++i) {
             buffer[i] = another_allocator.buffer[i];
-            lst.push_back(&buffer[i]);
+            st.push(&buffer[i]);
         }
     }
 
